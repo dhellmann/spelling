@@ -8,12 +8,15 @@
    commandline
    config
    docstring
+   Dutta
    emacs
    env
+   Gulden
    Homebrew
    libenchant
    macOS
    namespace
+   Nico
    repo
    scm
    setuptools
@@ -27,6 +30,9 @@ Next
 - Modernize packaging using hatch and hatchling.
 - List Python 3.13 as supported.
 - Add automatically generated documentation for key modules.
+- `#234 <https://github.com/sphinx-contrib/spelling/issues/234>`__ Fix bug
+  where nodes with no source information would cause a TypeError. Reported by
+  Trevor Gross, Ronnie Dutta, and Nico Gulden.
 
 Bug Fixes
 ---------

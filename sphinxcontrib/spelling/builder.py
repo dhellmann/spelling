@@ -228,7 +228,12 @@ class SpellingBuilder(Builder):
             # the full path, so convert all to relative path
             # for consistency.
             source, node_lineno = docutils.utils.get_source_line(node)
-            source = osutil.relpath(source)
+            if source is not None:
+                source = osutil.relpath(source)
+            else:
+                # Some nodes (e.g., programmatically generated) may not have
+                # source information. Use a placeholder.
+                source = "<unknown>"
 
             # Check the text of the node.
             misspellings = self.checker.check(node.astext())

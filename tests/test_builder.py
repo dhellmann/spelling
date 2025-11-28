@@ -677,3 +677,77 @@ def test_only_directive(sphinx_project):
     )
     assert "(whaat)" in output_text
     assert "(teh)" not in output_text
+
+
+def test_nodes_with_none_source(sphinx_project):
+    # Reproduces https://github.com/sphinx-contrib/spelling/issues/234
+    # Tests handling of nodes where get_source_line returns None for source
+    srcdir, outdir = sphinx_project
+
+    # Create an extension that patches docutils.utils.get_source_line to return None
+    # This directly simulates the bug condition
+    add_file(
+        srcdir,
+        "mock_none_source.py",
+        """
+import docutils.utils
+
+
+# Store the original function
+_original_get_source_line = docutils.utils.get_source_line
+
+
+def patched_get_source_line(node):
+    '''Return None for source to simulate issue #234'''
+    # Call original to get line number
+    source, lineno = _original_get_source_line(node)
+    # But return None for source to trigger the bug
+    return (None, lineno)
+
+
+def setup(app):
+    # Patch the function when building
+    def on_build_finished(app, exception):
+        # Restore original after build
+        docutils.utils.get_source_line = _original_get_source_line
+
+    # Patch before doctree-read
+    def on_doctree_read(app, doctree):
+        docutils.utils.get_source_line = patched_get_source_line
+
+    app.connect('doctree-read', on_doctree_read, priority=1)
+    app.connect('build-finished', on_build_finished)
+
+    return {'version': '0.1'}
+    """,
+    )
+
+    add_file(
+        srcdir,
+        "conf.py",
+        f"""
+import sys
+sys.path.insert(0, r'{srcdir}')
+extensions = ['sphinxcontrib.spelling', 'mock_none_source']
+    """,
+    )
+
+    add_file(
+        srcdir,
+        "contents.rst",
+        """
+    Test Document
+    =============
+
+    This text has a mispeling that should be caught.
+    """,
+    )
+
+    # Without the fix, this will crash with:
+    # TypeError: expected str, bytes or os.PathLike object, not NoneType
+    # With the fix, it should handle None gracefully and produce output
+    stdout, stderr, output_text = get_sphinx_output(srcdir, outdir, "contents")
+
+    # The spelling check should still work and find the misspelling
+    assert output_text is not None
+    assert "(mispeling)" in output_text
